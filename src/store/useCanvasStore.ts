@@ -13,6 +13,26 @@ import {
     applyEdgeChanges,
 } from '@xyflow/react'
 
+export interface Outcome {
+    id: string
+    title: string
+    description: string
+}
+
+export interface Metric {
+    id: string
+    title: string
+    description: string
+    outcomes: Outcome[]
+}
+
+export interface OpportunityData {
+    type: 'BUSINESS_OPPORTUNITY' | 'CUSTOMER_OPPORTUNITY'
+    title: string
+    description: string
+    metrics: Metric[]
+}
+
 export type CanvasState = {
     nodes: Node[]
     edges: Edge[]
@@ -21,7 +41,8 @@ export type CanvasState = {
     onConnect: OnConnect
     setNodes: (nodes: Node[]) => void
     setEdges: (edges: Edge[]) => void
-    updateNodeData: (id: string, newData: any) => void
+    updateNodeData: (id: string, newData: Partial<OpportunityData>) => void
+    removeNode: (id: string) => void
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -48,7 +69,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     setEdges: (edges: Edge[]) => {
         set({ edges })
     },
-    updateNodeData: (id: string, newData: any) => {
+    updateNodeData: (id: string, newData: Partial<OpportunityData>) => {
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === id) {
@@ -57,5 +78,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
                 return node
             }),
         })
+    },
+    removeNode: (id: string) => {
+        set((state) => ({
+            nodes: state.nodes.filter(n => n.id !== id),
+            edges: state.edges.filter(e => e.source !== id && e.target !== id)
+        }))
     },
 }))

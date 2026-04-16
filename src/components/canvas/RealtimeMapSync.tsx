@@ -4,23 +4,21 @@ import { useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useCanvasStore } from '@/store/useCanvasStore'
 
-export function RealtimeBoardSync({ boardId }: { boardId: string }) {
-    const { setNodes, setEdges, nodes, edges } = useCanvasStore()
+export function RealtimeMapSync({ mapId }: { mapId: string }) {
+    const { setNodes, setEdges } = useCanvasStore()
     const supabase = createClient()
     const isInitialized = useRef(false)
 
     useEffect(() => {
         // 1. Initial Fetch
-        const fetchBoardData = async () => {
-            const { data: dbNodes } = await supabase.from('nodes').select('*').eq('board_id', boardId)
-            const { data: dbEdges } = await supabase.from('edges').select('*').eq('board_id', boardId)
+        const fetchMapData = async () => {
+            const { data: dbNodes } = await supabase.from('nodes').select('*').eq('board_id', mapId)
+            const { data: dbEdges } = await supabase.from('edges').select('*').eq('board_id', mapId)
 
             if (dbNodes) {
-                // Map DB nodes to React Flow nodes
                 const rfNodes = dbNodes.map(n => ({
                     id: n.id,
-                    type: n.type === 'CUSTOMER_OPPORTUNITY' || n.type === 'BUSINESS_OPPORTUNITY' ? 'Opportunity' :
-                        n.type === 'SUCCESS_METRIC' ? 'Metric' : 'Outcome',
+                    type: 'Opportunity',
                     position: { x: n.position_x, y: n.position_y },
                     data: { ...n.data, type: n.type },
                 }))
@@ -38,24 +36,21 @@ export function RealtimeBoardSync({ boardId }: { boardId: string }) {
             isInitialized.current = true
         }
 
-        fetchBoardData()
+        fetchMapData()
 
         // 2. Realtime Subscription (Postgres Changes)
-        const channel = supabase.channel(`board_sync_${boardId}`)
+        const channel = supabase.channel(`map_sync_${mapId}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'nodes', filter: `board_id=eq.${boardId}` },
+                { event: '*', schema: 'public', table: 'nodes', filter: `board_id=eq.${mapId}` },
                 (payload) => {
-                    // In a real app we carefully merge, ignore echoes. 
-                    // For now, refetch or merge simple updates.
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         const n = payload.new as any
                         useCanvasStore.getState().setNodes([
                             ...useCanvasStore.getState().nodes.filter(existing => existing.id !== n.id),
                             {
                                 id: n.id,
-                                type: n.type === 'CUSTOMER_OPPORTUNITY' || n.type === 'BUSINESS_OPPORTUNITY' ? 'Opportunity' :
-                                    n.type === 'SUCCESS_METRIC' ? 'Metric' : 'Outcome',
+                                type: 'Opportunity',
                                 position: { x: n.position_x, y: n.position_y },
                                 data: { ...n.data, type: n.type },
                             }
@@ -70,9 +65,20 @@ export function RealtimeBoardSync({ boardId }: { boardId: string }) {
             )
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'edges', filter: `board_id=eq.${boardId}` },
+                { event: '*', schema: 'public', table: 'edges', filter: `board_id=eq.${mapId}` },
                 (payload) => {
-                    // Skip complex edge sync here for brevity, similar to nodes
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        const e = payload.new as any
+                        useCanvasStore.getState().setEdges([
+                            ...useCanvasStore.getState().edges.filter(existing => existing.id !== e.id),
+                            { id: e.id, source: e.source, target: e.target }
+                        ])
+                    } else if (payload.eventType === 'DELETE') {
+                        const old = payload.old as any
+                        useCanvasStore.getState().setEdges(
+                            useCanvasStore.getState().edges.filter(existing => existing.id !== old.id)
+                        )
+                    }
                 }
             )
             .subscribe()
@@ -80,7 +86,7 @@ export function RealtimeBoardSync({ boardId }: { boardId: string }) {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [boardId])
+    }, [mapId])
 
     return null
 }
