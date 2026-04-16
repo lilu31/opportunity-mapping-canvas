@@ -1,6 +1,6 @@
 # 🗺️ Opportunity Mapping Canvas
 
-A collaborative SaaS tool for **Opportunity Mapping** using the [Teresa Torres](https://www.producttalk.org/) Continuous Discovery framework. Visually map out business & customer opportunities, define success metrics, and track targeted outcomes — all in a real-time, AI-powered interactive canvas.
+A collaborative SaaS tool for **Opportunity Mapping** based on an adapted version of [Teresa Torres](https://www.producttalk.org/) Continuous Discovery framework. Visually map out business & customer opportunities, define success metrics, and track targeted outcomes — all in a real-time, AI-powered interactive canvas.
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)
 ![React Flow](https://img.shields.io/badge/React_Flow-Interactive_Canvas-06B6D4?style=flat-square)
